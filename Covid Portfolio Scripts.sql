@@ -1,36 +1,37 @@
+/*
+Covid 19 Data Exploration 
+Skills used: Joins, CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Converting Data Types
+*/
+
 select *
 From PortfolioCovid .. CovidDeaths
 Where continent is not null
 order by 3,4
 
-
---select *
---From PortfolioCovid .. CovidVaccinations
---order by 3,4
-
+-- Select Data that we are going to be starting with
 
 select Location, date, total_cases, new_cases, total_deaths, population
 From PortfolioCovid .. CovidDeaths 
 Where continent is not null
 order by 1,2
 
--- Looking at the Total Cases Vs Total Deaths
--- Shows likelihood of dying if you contact covid in a country
+-- Total Cases vs Total Deaths
+-- Shows likelihood of dying if you contract covid in your country
 
 select Location, date, total_cases, total_deaths, (total_deaths/total_cases) * 100 as DeathPercentage
 From PortfolioCovid .. CovidDeaths
 where location like '%India%' and continent is not null
 order by 1,2
 
--- Looking at the Total Cases Vs Population
--- Shows what percentage of population get Covid
+-- Total Cases vs Population
+-- Shows what percentage of population infected with Covid
 
 select Location, date, total_cases, population, (total_cases/population) * 100 as PercentagePopulationinfected
 From PortfolioCovid .. CovidDeaths
 where location like '%India%' and continent is not null
 order by 1,2
 
--- Looking at Coutry with Highest Infection rate compared to Population
+-- Countries with Highest Infection Rate compared to Population
 
 select Location, population, MAX(total_cases) as HighestInfectionCount, Max(total_cases/population) * 100 as 
 	PercentPopulationInfected
@@ -40,7 +41,7 @@ Where continent is not null
 Group by Location, population
 order by PercentPopulationInfected desc
 
--- Showing Countries with Highest Death Count per Population
+-- Countries with Highest Death Count per Population
 
 select Location, population, MAX(cast(total_deaths as bigint)) as TotalDeathCount
 --Max(total_cases/population) * 100 as PercentPopulationInfected
@@ -51,8 +52,9 @@ Group by Location
 order by TotalDeathCount desc
 
 
--- Breaking Down by Continent
--- Showing continents with highest death count
+-- BREAKING THINGS DOWN BY CONTINENT
+
+-- Showing contintents with the highest death count per population
 
 select continent, MAX(cast(total_deaths as bigint)) as TotalDeathCount
 From PortfolioCovid .. CovidDeaths
@@ -70,7 +72,8 @@ Group by date
 order by  1, 2
 
 
--- Looking at Total Population vs Vaccinations
+-- Total Population vs Vaccinations
+-- Shows Percentage of Population that has recieved at least one Covid Vaccine
 
 select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
 SUM(Convert(bigint, vac.new_vaccinations)) Over (Partition by dea.location order by dea.location, dea.date) as RollingPeopleVaccinated
@@ -81,7 +84,7 @@ Join PortfolioCovid .. CovidVaccinations vac
 where dea.continent is not null
 order by 2, 3
 
- -- Using CTE to perform Calculation on Partition By in previous query
+-- Using CTE to perform Calculation on Partition By in previous query
 
 With PopvsVac (Continent, Location, Date, Population, New_Vaccinations, RollingPeopleVaccinated)
 as
@@ -99,7 +102,7 @@ where dea.continent is not null
 Select *, (RollingPeopleVaccinated/Population)*100
 From PopvsVac
 
--- TEmp Table
+-- Using Temp Table to perform Calculation on Partition By in previous query
 
 drop table if exists #PercentPopulationVaccinated
 Create Table #PercentPopulationVaccinated
@@ -128,9 +131,7 @@ From #PercentPopulationVaccinated
 
 --Creating View to store data for later visualizations
 
-drop view PercentPopulationVaccinated
-
-Create view PercentPopulationvaccinated as
+Create View PercentPopulationvaccinated as
 Select dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
 , SUM(CONVERT(bigint,vac.new_vaccinations)) OVER (Partition by dea.Location Order by dea.location, dea.Date) as RollingPeopleVaccinated
 --, (RollingPeopleVaccinated/population)*100
@@ -139,8 +140,3 @@ Join PortfolioCovid..CovidVaccinations vac
 	On dea.location = vac.location
 	and dea.date = vac.date
 where dea.continent is not null
---order by 2, 3
-
-select *
-from PercentPopulationvaccinated
-
